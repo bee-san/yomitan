@@ -339,8 +339,8 @@ function createProfileOptionsUpdatedTestData1() {
             averageFrequency: false,
             glossaryLayoutMode: 'default',
             mainDictionary: '',
-            popupTheme: 'light',
-            popupOuterTheme: 'light',
+            popupTheme: 'dark',
+            popupOuterTheme: 'dark',
             customPopupCss: '',
             customPopupOuterCss: '',
             enableWanakana: true,
@@ -752,7 +752,7 @@ function createOptionsUpdatedTestData1() {
             },
         ],
         profileCurrent: 0,
-        version: 75,
+        version: 76,
         global: {
             database: {
                 prefixWildcardsSupported: false,
@@ -832,7 +832,7 @@ describe('OptionsUtil', () => {
         const options = structuredClone(optionsUtil.getDefault());
         const customPopupCss = 'body { color: #f00; }';
         const customPopupOuterCss = 'iframe.yomitan-popup { border: 2px solid red; }';
-        options.version = 75;
+        options.version = 76;
         options.profiles[0].options.general.customPopupCss = customPopupCss;
         options.profiles[0].options.general.customPopupOuterCss = customPopupOuterCss;
 
