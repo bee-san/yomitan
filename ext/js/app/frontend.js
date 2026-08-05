@@ -27,6 +27,7 @@ import {TextSourceElement} from '../dom/text-source-element.js';
 import {TextSourceGenerator} from '../dom/text-source-generator.js';
 import {TextSourceRange} from '../dom/text-source-range.js';
 import {TextScanner} from '../language/text-scanner.js';
+import {isHoshidictsReaderEnabled} from './gsm-hoshidicts-mining.js';
 import {GsmYomitanApiBridge} from './gsm-yomitan-api-bridge.js';
 
 const GSM_GAMEPAD_NAVIGATION_EVENT_TYPE = 'gsm-gamepad-navigation-active';
@@ -241,6 +242,7 @@ export class Frontend {
      * @param {import('text-source').TextSource} textSource The text source to search.
      */
     async setTextSource(textSource) {
+        if (isHoshidictsReaderEnabled()) { return; }
         this._textScanner.setCurrentTextSource(null);
         await this._textScanner.search(textSource, null, false, true);
     }
@@ -277,23 +279,24 @@ export class Frontend {
      * @param {MessageEvent} event
      */
     _onGsmPostMessage(event) {
-        const data = event?.data;
+        const data = /** @type {unknown} */ (event.data);
         if (typeof data !== 'object' || data === null) { return; }
+        const dataObject = /** @type {import('core').UnknownObject} */ (data);
 
-        if (data.type === GSM_GAMEPAD_NAVIGATION_EVENT_TYPE) {
-            if (data.active === false) {
+        if (dataObject.type === GSM_GAMEPAD_NAVIGATION_EVENT_TYPE) {
+            if (dataObject.active === false) {
                 this._clearSelection(false);
             }
             return;
         }
 
-        if (data.type !== GSM_YOMITAN_CONTROL_EVENT_TYPE) { return; }
-        if (data.action === GSM_YOMITAN_CONTROL_ACTION_HIDE_POPUP) {
+        if (dataObject.type !== GSM_YOMITAN_CONTROL_EVENT_TYPE) { return; }
+        if (dataObject.action === GSM_YOMITAN_CONTROL_ACTION_HIDE_POPUP) {
             this._clearSelection(false);
             return;
         }
-        if (data.action === GSM_YOMITAN_CONTROL_ACTION_LOOKUP_POINT) {
-            void this._triggerGsmLookupAtPoint(data.x, data.y);
+        if (dataObject.action === GSM_YOMITAN_CONTROL_ACTION_LOOKUP_POINT) {
+            void this._triggerGsmLookupAtPoint(dataObject.x, dataObject.y);
         }
     }
 
@@ -301,8 +304,13 @@ export class Frontend {
      * @param {Event} event
      */
     _onGsmGamepadNavigationEvent(event) {
-        const detail = /** @type {{active?: boolean}|undefined} */ (event instanceof CustomEvent ? event.detail : void 0);
-        if (detail?.active === false) {
+        const detail = /** @type {unknown} */ (
+            event instanceof CustomEvent ? event.detail : void 0
+        );
+        if (typeof detail !== 'object' || detail === null) { return; }
+        const detailObject =
+            /** @type {import('core').UnknownObject} */ (detail);
+        if (detailObject.active === false) {
             this._clearSelection(false);
         }
     }
@@ -313,6 +321,7 @@ export class Frontend {
      * @returns {Promise<void>}
      */
     async _triggerGsmLookupAtPoint(x, y) {
+        if (isHoshidictsReaderEnabled()) { return; }
         if (typeof x !== 'number' || !Number.isFinite(x) || typeof y !== 'number' || !Number.isFinite(y)) {
             return;
         }
@@ -909,7 +918,12 @@ export class Frontend {
      * @returns {void}
      */
     _updateTextScannerEnabled() {
-        const enabled = (this._options !== null && this._options.general.enable && !this._disabledOverride);
+        const enabled = (
+            this._options !== null &&
+            this._options.general.enable &&
+            !this._disabledOverride &&
+            !isHoshidictsReaderEnabled()
+        );
         if (enabled === this._textScanner.isEnabled()) { return; }
         this._textScanner.setEnabled(enabled);
         if (this._textScannerHasBeenEnabled) {
@@ -1069,6 +1083,7 @@ export class Frontend {
      * @returns {Promise<boolean>}
      */
     async _scanSelectedText(allowEmptyRange, disallowExpandSelection, showEmpty = false) {
+        if (isHoshidictsReaderEnabled()) { return false; }
         safePerformance.mark('frontend:scanSelectedText:start');
         const range = this._getFirstSelectionRange(allowEmptyRange);
         if (range === null) { return false; }

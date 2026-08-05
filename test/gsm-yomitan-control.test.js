@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025  Yomitan Authors
+ * Copyright (C) 2023-2026  Yomitan Authors
  * Copyright (C) 2016-2022  Yomichan Authors
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,9 +20,14 @@ import {describe, expect, test, vi} from 'vitest';
 import {Frontend} from '../ext/js/app/frontend.js';
 import {TextScanner} from '../ext/js/language/text-scanner.js';
 
+/* eslint-disable no-underscore-dangle */
+
 describe('GSM Yomitan control hooks', () => {
     test('TextScanner.searchAtPoint uses the mouse click lookup path', async () => {
-        const inputDetail = {restoreSelection: true};
+        const inputDetail =
+            /** @type {import('text-scanner').InputInfoDetail} */ ({
+                restoreSelection: true,
+            });
         const inputInfo = {pointerType: 'mouse', eventType: 'click'};
         const createInputInfo = vi.fn(() => inputInfo);
         const searchAt = vi.fn(async () => {});
@@ -45,14 +50,17 @@ describe('GSM Yomitan control hooks', () => {
             _clearSelection: clearSelection,
         };
 
-        Frontend.prototype._onGsmPostMessage.call(frontend, {
-            data: {
-                type: 'gsm-yomitan-control',
-                action: 'lookup-point',
-                x: 25,
-                y: 50,
-            },
-        });
+        Frontend.prototype._onGsmPostMessage.call(
+            frontend,
+            /** @type {MessageEvent} */ (/** @type {unknown} */ ({
+                data: {
+                    type: 'gsm-yomitan-control',
+                    action: 'lookup-point',
+                    x: 25,
+                    y: 50,
+                },
+            })),
+        );
 
         expect(triggerLookup).toHaveBeenCalledWith(25, 50);
         expect(clearSelection).not.toHaveBeenCalled();
@@ -69,4 +77,31 @@ describe('GSM Yomitan control hooks', () => {
 
         expect(searchAtPoint).not.toHaveBeenCalled();
     });
+
+    test('Frontend disables Yomitan scanning when Hoshidicts owns the overlay', () => {
+        vi.stubGlobal('document', {
+            documentElement: {
+                dataset: {gsmHoshidictsEnabled: 'true'},
+            },
+        });
+        const setEnabled = vi.fn();
+        const frontend = {
+            _options: {general: {enable: true}},
+            _disabledOverride: false,
+            _textScanner: {
+                isEnabled: () => true,
+                setEnabled,
+            },
+            _textScannerHasBeenEnabled: true,
+            _clearSelection: vi.fn(),
+        };
+
+        Frontend.prototype._updateTextScannerEnabled.call(frontend);
+
+        expect(setEnabled).toHaveBeenCalledExactlyOnceWith(false);
+        expect(frontend._clearSelection).toHaveBeenCalledExactlyOnceWith(true);
+        vi.unstubAllGlobals();
+    });
 });
+
+/* eslint-enable no-underscore-dangle */
